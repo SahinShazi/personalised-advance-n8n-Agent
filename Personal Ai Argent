@@ -1,0 +1,881 @@
+{
+  "name": "Telegram AI Bot - Voice + Text + Image (Advanced)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "*"
+        ],
+        "additionalFields": {}
+      },
+      "id": "98a1311f-9cd0-4262-a81a-65fcd09e977d",
+      "name": "Listen for incoming events",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [
+        240,
+        0
+      ],
+      "webhookId": "322dce18-f93e-4f86-b9b1-3305519b7834",
+      "typeVersion": 1,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendChatAction",
+        "chatId": "={{ $('Listen for incoming events').first().json.message.from.id }}"
+      },
+      "id": "78242acb-c49a-40e8-8731-0ed6069afc81",
+      "name": "Send Typing action",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        460,
+        0
+      ],
+      "typeVersion": 1.2,
+      "webhookId": "a18db278-577b-4aac-b6bc-c37ce5dc524d",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "text-condition",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "voice-condition",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.message.voice }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Voice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "image-condition",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.message.photo }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "a3cf7f22-302d-4a7a-9925-97e8d729794f",
+      "name": "Determine content type",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        680,
+        0
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "text-msg",
+              "name": "CombinedMessage",
+              "type": "string",
+              "value": "={{ $json.message.text }}"
+            },
+            {
+              "id": "text-type",
+              "name": "MessageType",
+              "type": "string",
+              "value": "text"
+            },
+            {
+              "id": "text-forward",
+              "name": "SourceType",
+              "type": "string",
+              "value": "={{ $json.message.forward_origin ? 'forwarded' : 'direct' }}"
+            },
+            {
+              "id": "image-url-text",
+              "name": "ImageUrl",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "text-set-node",
+      "name": "Set Text Message",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        900,
+        -200
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "71dee759-a743-4091-b5bf-3cb16d62e5a0",
+      "name": "Download voice file",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        0
+      ],
+      "typeVersion": 1.2,
+      "webhookId": "2852a09c-80e7-462c-a101-4b00ec484cfd",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "2915ff00-60ed-4c60-99c1-c4a1a651e01c",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "voice-msg",
+              "name": "CombinedMessage",
+              "type": "string",
+              "value": "={{ $json.content.parts[0].text }}"
+            },
+            {
+              "id": "voice-type",
+              "name": "MessageType",
+              "type": "string",
+              "value": "voice"
+            },
+            {
+              "id": "voice-forward",
+              "name": "SourceType",
+              "type": "string",
+              "value": "direct"
+            },
+            {
+              "id": "image-url-voice",
+              "name": "ImageUrl",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "voice-set-node",
+      "name": "Set Voice Transcription",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1300,
+        0
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[$json.message.photo.length - 1].file_id }}",
+        "additionalFields": {}
+      },
+      "id": "image-download-node",
+      "name": "Download Image file",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        200
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "inputType": "binary",
+        "prompt": "={{ $('Listen for incoming events').first().json.message.caption ? 'User sent this image with message: ' + $('Listen for incoming events').first().json.message.caption + '. Describe the image and respond to the user message.' : 'Please describe this image in detail. What do you see? Provide a helpful and thorough analysis.' }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        200
+      ],
+      "id": "image-analyze-node",
+      "name": "Analyze Image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "image-msg",
+              "name": "CombinedMessage",
+              "type": "string",
+              "value": "={{ '[Image Analysis] ' + $json.content.parts[0].text + ($('Listen for incoming events').first().json.message.caption ? ' | User Caption: ' + $('Listen for incoming events').first().json.message.caption : '') }}"
+            },
+            {
+              "id": "image-type",
+              "name": "MessageType",
+              "type": "string",
+              "value": "image"
+            },
+            {
+              "id": "image-forward",
+              "name": "SourceType",
+              "type": "string",
+              "value": "direct"
+            },
+            {
+              "id": "image-url-set",
+              "name": "ImageUrl",
+              "type": "string",
+              "value": "image_provided"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "image-set-node",
+      "name": "Set Image Analysis",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1300,
+        200
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.CombinedMessage }}",
+        "options": {
+          "systemMessage": "=You are a personal AI assistant for Sahin Enam only.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🔒 OWNER-ONLY ACCESS RULE\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nYour OWNER Telegram ID is: {{ $env.OWNER_TELEGRAM_ID }}\nCurrent user Telegram ID : {{ $('Listen for incoming events').first().json.message.from.id }}\n\nIf these two values do NOT match, reply ONLY with:\n\"⛔ Sorry, this is a private assistant. I am not authorised to help you.\"\nThen STOP — do not answer anything else, do not reveal any information.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n👤 ABOUT SAHIN ENAM\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nName        : Sahin Enam\nProfession  : Full Stack Web Developer & AI Automation Specialist\nLocation    : Dhaka, Bangladesh\nEmail       : sahin.enam10@gmail.com\nExperience  : 4+ years building highly interactive web applications\nStats       : 2M+ Lines of Code | 50+ Projects Delivered | 100% Client Satisfaction\nStatus      : Available for new projects\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🛠️ TECHNICAL SKILLS\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nCore Language    : JavaScript ES6+ — 95%\nFrontend         : React.js / Next.js — 92%, Tailwind CSS — 94%, HTML5 & CSS3 — 98%, TypeScript — 85%\nBackend          : Node.js / Express — 88%, Python — 85%\nDatabases        : Firebase — 90%, MongoDB — 82%, PostgreSQL — 80%\nAI & Automation  : Zapier — 96%, N8N — 90%, AI/LLM Integration — 88%, Telegram Bots — 92%\nAPIs & Tools     : API Integration — 90%, Web Scraping — 88%, Git & GitHub — 90%\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n💼 SERVICES OFFERED\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n1. Frontend Development      — Modern, responsive, interactive UIs\n2. Backend Development       — Secure, scalable server-side apps & APIs\n3. Full Stack Development    — End-to-end web application development\n4. API Development           — REST APIs, third-party integrations\n5. Business Automation       — N8N / Zapier workflow automation\n6. AI Integration            — LLM & AI tools connected to web/business apps\n7. Performance Optimization  — Speed, SEO, accessibility, Core Web Vitals\n8. Security Testing          — Vulnerability identification & hardening\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🚀 KEY PROJECTS\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n• School Website             — Full school management web platform\n• AI-Powered News Curator    — Newspaper AI for automated news curation\n• AI Telegram Chatbot        — Intelligent Telegram bot with AI capabilities\n• Real-time Gold Price API   — Live gold price tracker & REST API\n• Stock Analyst AI Bot       — Automated stock analysis via AI\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n✨ HIGHLIGHTS\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Fast Performance    — Optimised for maximum speed\n• Clean Code          — Maintainable, standards-compliant codebase\n• Automation Expert   — Smart systems to reduce manual work\n• Security Focused    — Best practices to keep apps secure\n• API Expertise       — Building and integrating powerful APIs\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🔗 SOCIAL & LINKS\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nGitHub   : https://github.com/SahinShazi\nLinkedIn : https://www.linkedin.com/in/sahinenam\nTelegram : https://t.me/SahinShazi\nEmail    : sahin.enam10@gmail.com\nPortfolio: (your portfolio domain)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n📺 YOUTUBE CONTENT\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n• My Voice is Not Good 😊  : https://youtu.be/ISspRJTiDoc\n• WordPress is Dad?!!      : https://youtu.be/nRKEfTN7vKw\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n📝 BLOG TOPICS\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nWeb Development tips, JavaScript, AI automation, Financial Literacy,\nProductivity & AI agents, Career growth for developers.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n🤖 ASSISTANT RULES\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nToday    : {{ DateTime.fromISO($now).toLocaleString(DateTime.DATETIME_FULL) }}\nMsg type : {{ $json.MessageType }}\n\nYou are Sahin's personal assistant. Answer questions about his skills, services,\nand portfolio confidently. If something is unknown, say so honestly.\n\nTELEGRAM HTML FORMATTING:\n- <b>bold</b>  <i>italic</i>  <u>underline</u>  <s>strikethrough</s>\n- <code>inline code</code>  <pre><code class=\"language-js\">...</code></pre>\n- Escape: & → &amp;   < → &lt;   > → &gt; (outside tags)\n- /start command: greet Sahin warmly, explain text/voice/image support\n- Voice message: acknowledge the voice input\n- Image message: respond based on the provided image analysis"
+        }
+      },
+      "id": "17397db8-f9b0-48c3-90c9-b472cc56debc",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1520,
+        0
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "sessionKey": "={{ $('Listen for incoming events').first().json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "id": "d0d85eb6-8bb4-4e0b-bf08-774109d22562",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        1520,
+        200
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1720,
+        200
+      ],
+      "id": "a184adce-b7a8-40b4-9370-d6c9fc79c124",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Listen for incoming events').first().json.message.from.id }}",
+        "text": "=⚠️ <b>An error occurred.</b>\nPlease try again in a moment.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "122263fe-0d1e-4ddd-b347-afdab7bd22a5",
+      "name": "Send error message",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        900,
+        400
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## ⚙️ Setup Instructions\n\n### Step 1 — Credentials\nAdd these credentials in n8n Settings → Credentials:\n- **Telegram Bot** — your bot token\n- **Google Gemini** — your Gemini API key\n\n### Step 2 — Environment Variable (REQUIRED)\nGo to **Settings → Environment Variables** and add:\n| Variable | Value |\n|---|---|\n| `OWNER_TELEGRAM_ID` | Your Telegram numeric user ID |\n\n> 💡 To find your Telegram ID, message **@userinfobot** on Telegram.\n\n### Step 3 — Activate\nToggle the workflow **Active**.\n\n---\n### How owner-only protection works\nEvery incoming message checks if the sender's Telegram ID matches `OWNER_TELEGRAM_ID`.\nIf it does NOT match → bot sends a denial message and stops.\nNobody else can use this bot.",
+        "height": 220,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-info",
+      "name": "Setup Instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        240,
+        -300
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 📝 Text Path\nDirect text messages from user → AI Agent",
+        "height": 100,
+        "width": 260,
+        "color": 3
+      },
+      "id": "sticky-text",
+      "name": "Sticky Text",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        870,
+        -280
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 🎙️ Voice Path\nVoice → Download → Gemini Transcribe → AI Agent",
+        "height": 100,
+        "width": 300,
+        "color": 6
+      },
+      "id": "sticky-voice",
+      "name": "Sticky Voice",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        870,
+        -80
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## 🖼️ Image Path\nImage → Download → Gemini Vision Analyze → AI Agent",
+        "height": 100,
+        "width": 320,
+        "color": 4
+      },
+      "id": "sticky-image",
+      "name": "Sticky Image",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        870,
+        120
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Telegram max message length is 4096 characters\nconst MAX_LENGTH = 4000; // slight buffer for safety\n\nconst output = $('AI Agent').item.json.output || '';\nconst chatId = $('Listen for incoming events').first().json.message.from.id;\n\n// Split into chunks, trying to break at newlines first\nfunction splitMessage(text, maxLen) {\n  const chunks = [];\n  let remaining = text;\n  \n  while (remaining.length > 0) {\n    if (remaining.length <= maxLen) {\n      chunks.push(remaining);\n      break;\n    }\n    \n    // Try to split at last newline within limit\n    let splitAt = remaining.lastIndexOf('\\n', maxLen);\n    \n    // If no newline found, split at last space\n    if (splitAt <= 0) {\n      splitAt = remaining.lastIndexOf(' ', maxLen);\n    }\n    \n    // If no space either, hard split\n    if (splitAt <= 0) {\n      splitAt = maxLen;\n    }\n    \n    chunks.push(remaining.substring(0, splitAt).trim());\n    remaining = remaining.substring(splitAt).trim();\n  }\n  \n  return chunks;\n}\n\nconst chunks = splitMessage(output, MAX_LENGTH);\n\n// Return each chunk as a separate item\nreturn chunks.map((chunk, index) => ({\n  json: {\n    text: chunk,\n    chatId: chatId,\n    chunkIndex: index,\n    totalChunks: chunks.length\n  }\n}));"
+      },
+      "id": "split-message-node",
+      "name": "Split Long Message",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1740,
+        0
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "send-chunk-node",
+      "name": "Send Message Chunk",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        1960,
+        0
+      ],
+      "typeVersion": 1.1,
+      "webhookId": "c37794fe-5391-4759-a0f1-60607d53f585",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// If HTML parsing failed, strip tags and retry as plain text\nconst text = $json.text || '';\nconst stripped = text.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"');\nreturn [{ json: { text: stripped, chatId: $json.chatId } }];"
+      },
+      "id": "fallback-strip-node",
+      "name": "Strip HTML Fallback",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2180,
+        -120
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "fallback-send-node",
+      "name": "Send Plain Text Fallback",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        2400,
+        -120
+      ],
+      "typeVersion": 1.1,
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## ✂️ Message Splitter\nAutomatically splits messages > 4000 chars into multiple chunks.\nEach chunk is sent as a separate Telegram message.\nFallback strips HTML if parse error occurs.",
+        "height": 120,
+        "width": 400,
+        "color": 7
+      },
+      "id": "sticky-split",
+      "name": "Sticky Split",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1720,
+        -180
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "owner-check-001",
+              "leftValue": "={{ $('Listen for incoming events').first().json.message.from.id.toString() }}",
+              "rightValue": "={{ $env.OWNER_TELEGRAM_ID }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "owner-check-node-001",
+      "name": "Owner Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Listen for incoming events').first().json.message.from.id }}",
+        "text": "=⛔ <b>Access Denied</b>\n\nThis is a private assistant. You are not authorised to use it.",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "deny-message-node-001",
+      "name": "Send Deny Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Listen for incoming events": {
+      "main": [
+        [
+          {
+            "node": "Owner Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Typing action": {
+      "main": [
+        [
+          {
+            "node": "Determine content type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determine content type": {
+      "main": [
+        [
+          {
+            "node": "Set Text Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download voice file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download Image file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Text Message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download voice file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Set Voice Transcription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Voice Transcription": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image file": {
+      "main": [
+        [
+          {
+            "node": "Analyze Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Image": {
+      "main": [
+        [
+          {
+            "node": "Set Image Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Image Analysis": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Split Long Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Long Message": {
+      "main": [
+        [
+          {
+            "node": "Send Message Chunk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Message Chunk": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Strip HTML Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strip HTML Fallback": {
+      "main": [
+        [
+          {
+            "node": "Send Plain Text Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Owner Check": {
+      "main": [
+        [
+          {
+            "node": "Send Typing action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Deny Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "advanced-v2-voice-text-image",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "12585853d8b139b9b0f22f69c7b01204817cefb251e7ed95aa519b2c751f8c9d"
+  },
+  "nodeGroups": [],
+  "id": "4O2v7MJk3vcPkJOv",
+  "tags": []
+}
